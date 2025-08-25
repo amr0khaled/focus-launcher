@@ -1,40 +1,29 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:focus_launcher/store/time_pod.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  String time = '';
-  bool _cancel = false;
-
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   late Timer clockInterval;
   @override
   void initState() {
-    void clockCallback(Timer timer) {
-      if (_cancel) {
-        timer.cancel();
-      }
-      DateTime now = DateTime.now().toLocal();
-      String hour = now.hour > 9 ? "${now.hour}" : "0${now.hour}";
-      String minute = now.minute > 9 ? "${now.minute}" : "0${now.minute}";
-      print('$hour:$minute');
-      setState(() => time = '$hour:$minute');
-    }
-
     super.initState();
-    clockInterval = Timer.periodic(const Duration(minutes: 1), clockCallback);
+    Future.microtask(() {
+      ref.watch(clockPod).start();
+    });
   }
 
   @override
   void dispose() {
     super.dispose();
-    _cancel = true;
   }
 
   Map<String, double> startSwipe = {'x': 0, 'y': 0};
@@ -46,14 +35,15 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Text(time,
-                  style: const TextStyle(
-                      fontSize: 32, fontWeight: FontWeight.w600)),
+              padding: const EdgeInsets.only(bottom: 8.0, top: 8.0),
+              child: Center(
+                child: Text(ref.read(clockPod).time,
+                    style: const TextStyle(
+                        fontSize: 64, fontWeight: FontWeight.w600)),
+              ),
             ),
             const Padding(
-              padding: EdgeInsets.only(bottom: 8.0),
-              child: Divider(color: Colors.white54),
+              padding: EdgeInsets.only(bottom: 16.0),
             ),
           ],
         ),
