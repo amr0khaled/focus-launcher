@@ -37,23 +37,19 @@ class _MainPageState extends ConsumerState<MainPage> {
   void loadApps() async {
     var apps = await DeviceApps.getInstalledApplications(
         includeSystemApps: true, onlyAppsWithLaunchIntent: true);
-    List<Application> _apps = [];
-    print(apps.length);
+    List<Application> filteredApps = [];
     for (Application app in apps.toSet().toList()) {
       bool names = app.packageName.startsWith('com.android') &&
           app.category == ApplicationCategory.undefined &&
           app.packageName != 'com.android.settings' &&
           !app.packageName.startsWith('com.android.camera');
-      print("${app.packageName} ${names}");
       if (!names) {
-        _apps.add(app);
+        filteredApps.add(app);
       }
     }
-    _apps = _apps.toSet().toList();
-    _apps.sort((a, b) => a.appName.compareTo(b.appName));
-    print(_apps.length);
-    ref.watch(appsPod).updateList(_apps);
-    print(_apps.length);
+    filteredApps = filteredApps.toSet().toList();
+    filteredApps.sort((a, b) => a.appName.compareTo(b.appName));
+    ref.watch(appsPod).updateList(filteredApps);
   }
 
   @override
