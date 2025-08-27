@@ -1,13 +1,19 @@
 import 'package:device_apps/device_apps.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focus_launcher/screens/apps.dart';
 import 'package:focus_launcher/screens/home.dart';
 import 'package:focus_launcher/screens/todos.dart';
 import 'package:focus_launcher/store/apps_pod.dart';
+import 'package:focus_launcher/store/time_pod.dart';
 import 'package:focus_launcher/theme.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
+      overlays: [SystemUiOverlay.bottom]);
+
   runApp(const ProviderScope(child: MyApp()));
 }
 
@@ -19,6 +25,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Focus',
       theme: theme,
+      debugShowCheckedModeBanner: false,
       home: const MainPage(),
     );
   }
@@ -56,6 +63,7 @@ class _MainPageState extends ConsumerState<MainPage> {
   void initState() {
     super.initState();
     loadApps();
+    Future.microtask(() => ref.read(clockPod).start());
   }
 
   @override
