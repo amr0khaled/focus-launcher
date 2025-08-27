@@ -1,6 +1,45 @@
 part of '../todos_pod.dart';
 
-enum List { earlier, today, tommorow, custom }
+enum List { earlier, today, tomorrow, later, custom }
+
+extension TaskListExtension on List {
+  String fromList() {
+    switch (this) {
+      case List.earlier:
+        return 'earlier';
+      case List.today:
+        return 'today';
+      case List.tomorrow:
+        return 'tomorrow';
+      case List.later:
+        return 'later';
+      case List.custom:
+        return 'custom';
+    }
+  }
+
+  static List fromString(String value) {
+    switch (value) {
+      case 'earlier':
+        return List.earlier;
+      case 'today':
+        return List.today;
+      case 'tomorrow':
+        return List.tomorrow;
+      case 'later':
+        return List.later;
+      default:
+        return List.custom;
+    }
+  }
+}
+
+const String table = 'todo';
+const String columnId = 'id';
+const String columnTitle = 'title';
+const String columnDone = 'done';
+const String columnDescription = 'description';
+const String columnTaskList = 'task_list'; // table name of the task_list
 
 class Todo extends ChangeNotifier {
   Todo(this.title,
@@ -8,10 +47,11 @@ class Todo extends ChangeNotifier {
       this.description,
       this.done = false,
       this.taskList = List.today,
-      this.listName = 'Today'}) {
+      DateTime? createdAt,
+      DateTime? updatedAt}) {
     id ??= const UuidV4().toString();
-    createdAt = DateTime.now();
-    updatedAt = DateTime.now();
+    this.createdAt = createdAt ?? DateTime.now();
+    this.updatedAt = updatedAt ?? DateTime.now();
   }
   String title;
   String? id;
@@ -21,6 +61,30 @@ class Todo extends ChangeNotifier {
   String? listName;
   late DateTime createdAt;
   late DateTime updatedAt;
+
+  factory Todo.fromMap(Map<String, Object?> map) {
+    return Todo(
+      map[columnTitle] as String,
+      id: map[columnId] as String,
+      done: map[columnDone] == 1,
+      description: map[columnDescription] as String,
+      taskList: TaskListExtension.fromString(map[columnTaskList] as String),
+      createdAt: DateTime.parse(map['created_at'] as String),
+      updatedAt: DateTime.parse(map['updated_at'] as String),
+    );
+  }
+  Map<String, Object?> toMap() {
+    return {
+      columnId: id,
+      columnTitle: title,
+      columnTaskList: taskList.fromList(),
+      columnDescription: description,
+      columnDone: done ? 1 : 0,
+      'list_name': listName,
+      'created_at': createdAt?.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+    };
+  }
 
   void update({
     String? title,
@@ -39,8 +103,8 @@ class Todo extends ChangeNotifier {
       case List.today:
         this.listName = 'Today';
         break;
-      case List.tommorow:
-        this.listName = 'Tommorow';
+      case List.tomorrow:
+        this.listName = 'tomorrow';
         break;
       default:
         this.taskList = List.custom;
@@ -52,20 +116,16 @@ class Todo extends ChangeNotifier {
 
   void checkListWithTime() {
     DateTime current = DateTime.now();
-    if (taskList == List.custom) {
+    if (taskList == List.custom || taskList == List.later) {
       return;
     }
-    if (createdAt.year != current.year || createdAt.month == current.month) {
-      taskList = List.earlier;
-    } else if (createdAt.year == current.year &&
-        createdAt.month == current.month) {
-      // Today -> Earlier
-      if ((createdAt.day + 2) <= current.day) {
-        taskList == List.earlier;
+    if (taskList == List.today) {
+      if (createdAt.isBefore(current)) {
+        taskList = List.earlier;
       }
-      // Today -> Tommorow
-      else if ((createdAt.day + 1) == current.day) {
-        taskList = List.tommorow;
+      // Today -> tomorrow
+      else if (createdAt.subtract(const Duration(days: 2)).isBefore(current)) {
+        taskList = List.tomorrow;
       }
     }
     notifyListeners();
