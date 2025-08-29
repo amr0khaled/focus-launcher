@@ -4,8 +4,8 @@ ThemeData theme = ThemeData(
   useMaterial3: true,
   platform: TargetPlatform.android,
   brightness: Brightness.dark,
-  colorScheme: const ColorScheme.dark(
-    primary: Colors.black87,
+  colorScheme: ColorScheme.dark(
+    primary: Colors.grey[300]!,
     surface: Colors.black,
     onSurface: Color(0xeeffffff),
     onPrimary: Colors.white70,

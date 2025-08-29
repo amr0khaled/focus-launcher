@@ -44,3 +44,7 @@ app.*.map.json
 
 # JANK
 flutter_jank*
+
+.env
+
+app.db

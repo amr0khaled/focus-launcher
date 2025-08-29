@@ -1,74 +1,72 @@
 part of '../todos_pod.dart';
 
-enum List { earlier, today, tomorrow, later, custom }
+enum ListTask { earlier, today, custom }
 
-extension TaskListExtension on List {
-  String fromList() {
+extension ListTaskExtension on ListTask {
+  String toValue(String? listName) {
     switch (this) {
-      case List.earlier:
-        return 'earlier';
-      case List.today:
-        return 'today';
-      case List.tomorrow:
-        return 'tomorrow';
-      case List.later:
-        return 'later';
-      case List.custom:
-        return 'custom';
+      case ListTask.earlier:
+        return 'Earlier';
+      case ListTask.today:
+        return 'Today';
+      case ListTask.custom:
+        if (listName != null && listName.isNotEmpty) {
+          return listName;
+        }
+        throw ArgumentError('Custom list must have a name.');
     }
   }
 
-  static List fromString(String value) {
-    switch (value) {
-      case 'earlier':
-        return List.earlier;
-      case 'today':
-        return List.today;
-      case 'tomorrow':
-        return List.tomorrow;
-      case 'later':
-        return List.later;
+  static ListTask fromString(String value) {
+    switch ("${value[0].toUpperCase()}${value.substring(1)}") {
+      case 'Earlier':
+        return ListTask.earlier;
+      case 'Today':
+        return ListTask.today;
       default:
-        return List.custom;
+        return ListTask.custom;
     }
   }
 }
 
-const String table = 'todo';
+const String table = 'tasks';
 const String columnId = 'id';
 const String columnTitle = 'title';
 const String columnDone = 'done';
 const String columnDescription = 'description';
-const String columnTaskList = 'task_list'; // table name of the task_list
+const String columnListTask = 'list_task'; // table name of the task_list
 
-class Todo extends ChangeNotifier {
-  Todo(this.title,
-      {this.id,
+class Task {
+  Task(this.title,
+      {String? id,
       this.description,
       this.done = false,
-      this.taskList = List.today,
+      this.listTask = ListTask.today,
+      String? listName,
       DateTime? createdAt,
-      DateTime? updatedAt}) {
-    id ??= const UuidV4().toString();
-    this.createdAt = createdAt ?? DateTime.now();
-    this.updatedAt = updatedAt ?? DateTime.now();
-  }
-  String title;
-  String? id;
-  String? description;
-  bool done;
-  List taskList;
-  String? listName;
-  late DateTime createdAt;
-  late DateTime updatedAt;
+      DateTime? updatedAt})
+      : id = id ?? const UuidV4().generate(),
+        createdAt = createdAt ?? DateTime.now(),
+        updatedAt = updatedAt ?? DateTime.now(),
+        listName = listTask.toValue(listName);
 
-  factory Todo.fromMap(Map<String, Object?> map) {
-    return Todo(
+  final String title;
+  final String id;
+  final String? description;
+  final bool done;
+  final ListTask listTask;
+  final String? listName;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  factory Task.fromMap(Map<String, Object?> map) {
+    return Task(
       map[columnTitle] as String,
       id: map[columnId] as String,
       done: map[columnDone] == 1,
-      description: map[columnDescription] as String,
-      taskList: TaskListExtension.fromString(map[columnTaskList] as String),
+      description: map[columnDescription] as String?,
+      listTask: ListTaskExtension.fromString(map[columnListTask] as String),
+      listName: map['list_name'] as String?,
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
     );
@@ -77,57 +75,47 @@ class Todo extends ChangeNotifier {
     return {
       columnId: id,
       columnTitle: title,
-      columnTaskList: taskList.fromList(),
-      columnDescription: description,
+      columnListTask: listTask.name,
+      columnDescription: description ?? '',
       columnDone: done ? 1 : 0,
       'list_name': listName,
-      'created_at': createdAt?.toIso8601String(),
-      'updated_at': updatedAt?.toIso8601String(),
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
     };
   }
 
-  void update({
+  Task copyWith({
     String? title,
     String? description,
     bool? done,
-    List? taskList,
+    ListTask? listTask,
     String? listName,
   }) {
-    this.title = title ?? this.title;
-    this.description = description ?? this.description;
-    this.done = done ?? this.done;
-    switch (taskList) {
-      case List.earlier:
-        this.listName = 'Earlier';
-        break;
-      case List.today:
-        this.listName = 'Today';
-        break;
-      case List.tomorrow:
-        this.listName = 'tomorrow';
-        break;
-      default:
-        this.taskList = List.custom;
-        this.listName = listName;
-    }
-    updatedAt = DateTime.now();
-    notifyListeners();
+    return Task(
+      title ?? this.title,
+      id: id,
+      description: description ?? this.description,
+      done: done ?? this.done,
+      listTask: listTask ?? this.listTask,
+      listName: listName ?? this.listName,
+      createdAt: createdAt,
+      updatedAt: DateTime.now(),
+    );
   }
 
-  void checkListWithTime() {
+  Task checkListWithTime() {
     DateTime current = DateTime.now();
-    if (taskList == List.custom || taskList == List.later) {
-      return;
+    int age = current.difference(createdAt).inDays;
+    ListTask _listTask;
+
+    if (listTask == ListTask.custom) {
+      return this;
     }
-    if (taskList == List.today) {
-      if (createdAt.isBefore(current)) {
-        taskList = List.earlier;
-      }
-      // Today -> tomorrow
-      else if (createdAt.subtract(const Duration(days: 2)).isBefore(current)) {
-        taskList = List.tomorrow;
-      }
+    if (age == 0) {
+      _listTask = ListTask.today;
+    } else {
+      _listTask = ListTask.earlier;
     }
-    notifyListeners();
+    return copyWith(listTask: _listTask);
   }
 }
